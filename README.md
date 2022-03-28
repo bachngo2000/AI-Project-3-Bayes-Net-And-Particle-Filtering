@@ -1,1 +1,1 @@
-# AI-Project-3-Bayes-Net-Particile-Filtering
+# AI-Project-3-Bayes-Net-Particle-Filtering
