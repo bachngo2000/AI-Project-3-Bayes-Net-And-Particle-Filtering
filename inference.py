@@ -83,7 +83,6 @@ class DiscreteDistribution(dict):
         if sum > 0 and sum != 1:
             for key, value in self.items():
                 self[key] = value/sum
-        raiseNotDefined()
 
     # Question 0
     # draws a sample from the distribution, where the probability that a key is sampled is proportional to its
@@ -298,6 +297,8 @@ class ExactInference(InferenceModule):
         self.beliefs.normalize()
 
     # Question 2
+    # update the agent’s belief distribution (probability distribution) over ghost positions given an observation from
+    # Pacman’s sensors. We are implementing the online belief update for observing new evidence.
     def observeUpdate(self, observation, gameState):
         """
         Update beliefs based on the distance observation and Pacman's position.
@@ -314,8 +315,25 @@ class ExactInference(InferenceModule):
         position is known.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        # beliefs represent the probability that the ghost is at a particular location, and are stored as a
+        # DiscreteDistribution object in a field called self.beliefs, which we will update.
+        # current position of Pacman
+        currPacmanPos = gameState.getPacmanPosition()
+        # jail position (only consider positions that are in self.allPositions)
+        jailPos = self.getJailPosition()
+        # a list of the possible ghost positions, including all legal positions plus the special jail position
+        allPossibleGhostPos = self.allPositions
 
+        # iterate updates over the variable allPossibleGhostPos = self.allPositions
+        for ghostPos in allPossibleGhostPos:
+            # current belief/probability distribution at the current position
+            prevProb = self.beliefs[ghostPos]
+            # utilize the function self.getObservationProb that returns the probability of an observation given
+            # Pacman’s current position, a potential ghost position, and the jail position.
+            # observation is the noisy Manhattan distance to the ghost we are tracking.
+            probObservation = self.getObservationProb(noisyDistance=observation, pacmanPosition=currPacmanPos, ghostPosition=ghostPos, jailPosition=jailPos)
+            # update the belief at every position on the map after receiving a sensor reading
+            self.beliefs[ghostPos] = probObservation*prevProb
         self.beliefs.normalize()
 
     # Question 3:
