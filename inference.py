@@ -334,9 +334,15 @@ class ExactInference(InferenceModule):
             probObservation = self.getObservationProb(noisyDistance=observation, pacmanPosition=currPacmanPos, ghostPosition=ghostPos, jailPosition=jailPos)
             # update the belief at every position on the map after receiving a sensor reading
             self.beliefs[ghostPos] = probObservation*prevProb
+        # normalize all the probability distributions so their total sums to 1
         self.beliefs.normalize()
 
     # Question 3:
+    # update the belief at every position on the map after one time step elapsing.
+    # The agent has access to the action distribution for the ghost through self.getPositionDistribution. In order to
+    # obtain the distribution over new positions for the ghost, given its previous position, we can do
+    # "newPosDist = self.getPositionDistribution(gameState, oldPos)"
+
     def elapseTime(self, gameState):
         """
         Predict beliefs in response to a time step passing from the current
@@ -347,11 +353,30 @@ class ExactInference(InferenceModule):
         current position is known.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        newBeliefs = self.beliefs.copy()
+        # list of all new position distributions
+        newPosDistributions = {}
+        # oldPos refers to the previous ghost position
+        for oldPos in self.allPositions:
+            # newPosDist is a DiscreteDistribution object, where for each position p in self.allPositions,
+            # newPosDist[p] is the probability that the ghost is at position p at time t + 1, given that the ghost is at
+            # position oldPos at time t.
+            # get the distribution over new positions for the ghost, given its previous position oldPos.
+            newPosDist = self.getPositionDistribution(gameState, oldPos)
+            newPosDistributions[oldPos] = newPosDist
+
+        for newGhostPos in self.allPositions:
+            belief = 0
+            for oldPos in self.allPositions:
+                oldPosDistribution = self.beliefs[oldPos]
+                newPosDistribution = newPosDistributions[oldPos][newGhostPos]
+                belief += oldPosDistribution * newPosDistribution
+            newBeliefs[newGhostPos] = belief
+        newBeliefs.normalize()
+        self.beliefs = newBeliefs
 
     def getBeliefDistribution(self):
         return self.beliefs
-
 
 class ParticleFilter(InferenceModule):
     """
@@ -398,7 +423,9 @@ class ParticleFilter(InferenceModule):
         gameState.
         """
         "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+
+
+
 
     def getBeliefDistribution(self):
         """
