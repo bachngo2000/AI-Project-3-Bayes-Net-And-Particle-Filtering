@@ -353,9 +353,10 @@ class ExactInference(InferenceModule):
         current position is known.
         """
         "*** YOUR CODE HERE ***"
-        newBeliefs = self.beliefs.copy()
+        self.beliefs.normalize()
         # list of all new position distributions
         newPosDistributions = {}
+        newBeliefs = self.beliefs.copy()
         # oldPos refers to the previous ghost position
         for oldPos in self.allPositions:
             # newPosDist is a DiscreteDistribution object, where for each position p in self.allPositions,
