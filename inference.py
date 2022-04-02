@@ -13,7 +13,6 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-
 import itertools
 import random
 import busters
@@ -21,7 +20,9 @@ import game
 
 from util import manhattanDistance, raiseNotDefined
 
-
+# DiscreteDistribution models belief distributions and weight distributions
+# the keys are the different discrete elements of our distribution, and the corresponding values are proportional
+# to the belief or weight that the distribution assigns that element.
 class DiscreteDistribution(dict):
     """
     A DiscreteDistribution models belief distributions and weight distributions
@@ -56,6 +57,7 @@ class DiscreteDistribution(dict):
         return float(sum(self.values()))
 
     # Question 0
+    # normalizes the values in the distribution to sum to one, but keeps the proportions of the values the same.
     def normalize(self):
         """
         Normalize the distribution such that the total value of all keys sums
@@ -79,16 +81,21 @@ class DiscreteDistribution(dict):
         {}
         """
         "*** YOUR CODE HERE ***"
-        sum = self.total()
-        if sum > 0 and sum != 1:
+        # find the total sum of the values in the distribution by using the total method
+        sum = float(self.total())
+        # For an empty distribution or a distribution where all the values are zero, we do nothing
+        if sum == 0:
+            return
+        elif sum > 0 and sum != 1:
+            #  keys are the different discrete elements of our distribution, and the corresponding values are
+            #  proportional to the belief or weight that the distribution assigns that element
             for key, value in self.items():
+                # modify the distribution directly
                 self[key] = value/sum
 
     # Question 0
-    # draws a sample from the distribution, where the probability that a key is sampled is proportional to its
-    # corresponding value. Assume that the distribution is not empty, and not all the values are zero. Note that the
-    # distribution does not necessarily have to be normalized prior to calling this method. You may find
-    # Python’s built-in random.random() function useful for this question.
+    # draws a sample from the distribution, where the probability that a certain key is sampled is proportional to its
+    # corresponding value. Assume that the distribution is not empty, and not all the values are zero
     def sample(self):
         """
         Draw a random sample from the distribution and return the key, weighted
@@ -111,14 +118,20 @@ class DiscreteDistribution(dict):
         0.0
         """
         "*** YOUR CODE HERE ***"
-        sum = self.total()
-        rand_sample = random.uniform(0, sum)
+        # find the total sum of the values in the distribution by using the total method
+        sum = float(self.total())
+        # Using Python’s built-in random.random function to select a random sample
+        rand_sample = random.random() * sum
+        # set the initial value proportional to the belief or weight that the distribution assigns a
+        # key/element to 0
         initVal = 0
         for key, value in self.items():
+            # if the corresponding sum of the initial values and value is greater than or equal to the randomly selected
+            # sample, return the associated element.
             if initVal + value >= rand_sample:
                 return key
-            initVal += value
-        raiseNotDefined()
+            # update the initial value proportional to the belief or weight that the distribution assigns.
+            initVal = value + initVal
 
 class InferenceModule:
     """
@@ -184,26 +197,35 @@ class InferenceModule:
         return self.getPositionDistributionHelper(gameState, pos, index, agent)
 
     # Question 1
+    #  takes in an observation (which is a noisy reading of the distance to the ghost), Pacman’s position,
+    #  the ghost’s position, and the position of the ghost’s jail, and returns the probability of the noisy distance
+    #  reading given Pacman’s position and the ghost’s position.
     def getObservationProb(self, noisyDistance, pacmanPosition, ghostPosition, jailPosition):
         """
         Return the probability P(noisyDistance | pacmanPosition, ghostPosition).
         """
         "*** YOUR CODE HERE ***"
+        # noisyDistance/observation is the noisy reading of the Manhattan distance to the ghost
+        # jailPosition = position of the ghost’s jail
+        # if the ghost is in jail and the noisy reading of the Manhattan distance to the ghost is null
+        # return probability of 1, but if the ghost is in jail and the noisy reading of the Manhattan distance to the
+        # ghost is not null, return probability of 0.
         if ghostPosition == jailPosition:
             if noisyDistance == None:
                 return 1
             else:
                 return 0
+        # if the noisy reading is null, and the ghost is not in jail, meaning it's somewhere else, return 0.
         elif noisyDistance == None:
-            if ghostPosition == jailPosition:
-                return 1
-            else:
+            if ghostPosition != jailPosition:
                 return 0
+        # if the ghost is not in jail and the noisy reading of the Manhattan to the ghost is not null, meaning that the
+        # ghost is somewhere out there, calculate the true manhattan distance from the Pacman's position to the ghost's
+        # position, then find and return the probability of noisyDistance given the true manhattan distance.
         else:
-            distance = manhattanDistance(pacmanPosition, ghostPosition)
-            prob = busters.getObservationProbability(noisyDistance, distance)
+            manhattDistance = manhattanDistance(pacmanPosition, ghostPosition)
+            prob = busters.getObservationProbability(noisyDistance, manhattDistance)
             return prob
-        raiseNotDefined()
 
     def setGhostPosition(self, gameState, ghostPosition, index):
         """
@@ -297,8 +319,8 @@ class ExactInference(InferenceModule):
         self.beliefs.normalize()
 
     # Question 2
-    # update the agent’s belief distribution (probability distribution) over ghost positions given an observation from
-    # Pacman’s sensors. We are implementing the online belief update for observing new evidence.
+    # correctly update the agent’s belief distribution (probability distribution) over ghost positions given an
+    # observation from Pacman’s sensors. We are implementing the online belief update for observing new evidence.
     def observeUpdate(self, observation, gameState):
         """
         Update beliefs based on the distance observation and Pacman's position.
@@ -325,15 +347,16 @@ class ExactInference(InferenceModule):
         allPossibleGhostPos = self.allPositions
 
         # iterate updates over the variable allPossibleGhostPos = self.allPositions
+        # for each ghost position 
         for ghostPos in allPossibleGhostPos:
             # current belief/probability distribution at the current position
-            prevProb = self.beliefs[ghostPos]
+            currProb = self.beliefs[ghostPos]
             # utilize the function self.getObservationProb that returns the probability of an observation given
             # Pacman’s current position, a potential ghost position, and the jail position.
             # observation is the noisy Manhattan distance to the ghost we are tracking.
             probObservation = self.getObservationProb(noisyDistance=observation, pacmanPosition=currPacmanPos, ghostPosition=ghostPos, jailPosition=jailPos)
-            # update the belief at every position on the map after receiving a sensor reading
-            self.beliefs[ghostPos] = probObservation*prevProb
+            # update the belief at every position on the map after receiving a sensor reading (observation)
+            self.beliefs[ghostPos] = probObservation*currProb
         # normalize all the probability distributions so their total sums to 1
         self.beliefs.normalize()
 
